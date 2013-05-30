@@ -6,3 +6,5 @@ Jinja2
 behave
 mako
 path.py
+docopt
+msgpack-python

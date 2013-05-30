@@ -54,11 +54,12 @@ def check_flag_state_step(context, flag_name, state, datatype="unicode"):
         state = bool(state)
     else:
         state = getattr(__builtins__, datatype)(state)
-    value = context.state.this[flag_name]
+    value = context.state.this.get(flag_name, None)
     assert value == state, (flag_name, value)
 
 
 @given(u'the stack has a length of {length:d}')
+@then(u'the stack has a length of {length:d}')
 def check_stack_length_step(context, length):
     assert len(context.state.stack) == length, len(context.state.stack)
 
@@ -68,3 +69,15 @@ def choose_action_step(context, action):
     state = context.state
     state.choose(context.plot, action)
     context.situation = state.current(context.plot)
+
+
+@then(u'the last message says "{message}"')
+def check_last_message_step(context, message):
+    message = message.replace(u'\\n', u'\n')
+    state = context.state
+    last_index = -1
+    last_message = state.messages[last_index]
+    while last_message is not None and not last_message.strip():
+        last_index -= 1
+        last_message = state.messages[last_index]
+    assert last_message == message, (last_index, last_message, state.messages)

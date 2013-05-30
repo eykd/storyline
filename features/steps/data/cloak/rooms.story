@@ -14,7 +14,7 @@ The walls of this small room were clearly once lined with hooks, though now only
 
 # = bar
 
-% if this.wearing_cloak:
+% if this["wearing cloak"]:
 ## Darkness
 
 It is pitch dark, and you can't see a thing. You could [back out slowly](!) or [fumble around for a light](!).
@@ -25,15 +25,15 @@ The bar, much rougher than you'd have guessed after the opulence of the foyer to
 % endif
 
 ## > back out slowly
-select('foyer')
+{{ select('foyer') }}
 
 ## > fumble around for a light
-push('actions::fumble around')
+{{ push('actions::fumble around') }}
 
 ## > message
-push('items::message')
+{{ push('items::message') }}
 
 
 # = outside
 
-You've only just arrived, and besides, the weather outside seems to be getting worse. Best to [stay inside](pop!)
+You've only just arrived, and besides, the weather outside seems to be getting worse. Best to [stay inside](select!foyer)

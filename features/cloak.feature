@@ -20,15 +20,34 @@ Feature: Cloak of Darkness
     When I read the Cloak of Darkness series definitions
     Then I have a Plot with the Cloak of Darkness Series definitions
     And I can start a new Plot State
+    And the stack has a length of 1
 
   Scenario: on_enter initialization
     Given I am in the "intro" situation of "start"
     Then the "wearing cloak" flag should be "True" (bool)
+    And the last message says "Hurrying through the rainswept November night, you're glad to see the bright\nlights of the Opera House. It's surprising that there aren't more people about\nbut, hey, what do you expect in a cheap demo game...?\n\n[Onward!](Onward!)"
 
   Scenario: Navigation to Cloakroom
     Given I am in the "intro" situation of "start"
-    And the stack has a length of 1
     When I choose "Onward!"
     Then I am in the "foyer" situation of "rooms"
     When I choose "west"
     Then I am in the "cloakroom" situation of "rooms"
+    And the stack has a length of 1
+
+  Scenario: Messing around in the Bar
+    Given I am in the "intro" situation of "start"
+    When I choose "Onward!"
+    Then I am in the "foyer" situation of "rooms"
+    When I choose "south"
+    Then I am in the "bar" situation of "rooms"
+    And the stack has a length of 1
+
+    When I choose "back out slowly"
+    Then I am in the "foyer" situation of "rooms"
+    And the stack has a length of 1
+
+    When I choose "south"
+    And I choose "fumble around for a light"
+    Then I am in the "fumble around" situation of "actions"
+    And the last message says "You fumble around in the dark, but to no avail."
