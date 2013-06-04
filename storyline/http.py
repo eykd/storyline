@@ -43,19 +43,12 @@ def story(action=None):
     except:
         state = plot.make_state()
 
-    print "At start:", state.situation, state.top
-    print state.stack
-    print state.current(plot).content
-    print state.messages
-
     if request.method == 'POST':
         action = request.form.get('action', action)
 
     if action is not None:
         state.choose(plot, action)
 
-    print "At end:", state.situation, state.top
-    print state.stack
     state.clear()
     session['state'] = msgpack.dumps(state.to_dict())
 
