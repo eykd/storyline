@@ -8,3 +8,4 @@ but, hey, what do you expect in a cheap demo game...?
 
 ## > on_enter
 {{ this.set("wearing cloak", True) }}
+{{ this.inventory.add("items::Opera Cloak")}}
