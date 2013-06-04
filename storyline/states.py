@@ -188,8 +188,9 @@ class PlotState(object):
         self.stack = []
         self.situation = None
         self.messages = []
+        self.inventory = set()
         self.this = ContextState()
-        self.here = defaultdict(ContextState)
+        self.locations = defaultdict(ContextState)
 
     def __repr__(self):
         return u"<PlotState: %s::%s>" % (u', '.join(self.stack), self.situation)
@@ -202,16 +203,18 @@ class PlotState(object):
             if isinstance(item, basestring):
                 state.stack[n] = (item, None)
         state.situation = d.get('situation', None)
+        state.inventory = set(d.get('inventory', ()))
         state.this.update(d.get('this', {}))
-        state.here.update(d.get('here', {}))
+        state.locations.update(d.get('locations', {}))
         return state
 
     def to_dict(self):
         return {
             'stack': self.stack,
             'situation': self.situation,
+            'inventory': list(self.inventory),
             'this': dict(self.this),
-            'here': dict(self.here),
+            'locations': dict(self.locations),
         }
 
     @property
@@ -220,8 +223,13 @@ class PlotState(object):
 
     def context(self, plot, situation):
         return {
+            # Local context objects
             'this': self.this,
-            'here': self.here[situation.address],
+            'inventory': self.inventory,
+            'here': self.locations[situation.address],
+            'elsewhere': self.locations,
+
+            # Local context actions
             'push': lambda a: self.push(plot, a) or u'',
             'pop': lambda: self.pop(plot) or u'',
             'replace': lambda a: self.replace(plot, a) or u'',
