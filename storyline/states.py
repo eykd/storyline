@@ -197,7 +197,10 @@ class PlotState(object):
     @classmethod
     def from_dict(cls, plot, d):
         state = plot.make_state()
-        state.stack[:] = d.get('stack', ('start', ))
+        state.stack[:] = d.get('stack', (('start', None), ))
+        for n, item in enumerate(state.stack):
+            if isinstance(item, basestring):
+                state.stack[n] = (item, None)
         state.situation = d.get('situation', None)
         state.this.update(d.get('this', {}))
         state.here.update(d.get('here', {}))
@@ -222,7 +225,7 @@ class PlotState(object):
             'push': lambda a: self.push(plot, a) or u'',
             'pop': lambda: self.pop(plot) or u'',
             'replace': lambda a: self.replace(plot, a) or u'',
-            'select': lambda a: self.enter(plot, a) or u''
+            'select': lambda a: self.replace(plot, a) or u''
         }
 
     def parse_address(self, plot, address):
@@ -256,32 +259,34 @@ class PlotState(object):
     def push(self, plot, situation):
         if isinstance(situation, basestring):
             situation = self.parse_address(plot, situation)
-        self.exit(plot)
-        self.stack.append(situation.series.name)
-        self.enter(plot, situation, exit=False)
+        self._exit(plot)
+        self.stack.append((situation.series.name, situation.name))
+        self._enter(plot, situation, exit=False)
 
     def pop(self, plot):
-        self.exit(plot)
+        self._exit(plot)
         self.stack.pop()
         if not self.stack:
             self.push(plot, 'start')
         else:
-            self.enter(plot)
+            self._enter(plot)
 
-    def enter(self, plot, situation=None, exit=True):
+    def _enter(self, plot, situation=None, exit=True):
         if situation is None:
-            situation = self.top
+            series, situation = self.top
+        if situation is None:
+            situation = self.parse_address(plot, series)
         if isinstance(situation, basestring):
             situation = self.parse_address(plot, situation)
         if not situation.prepared:
             situation = situation.prepare(self)
         if exit:
-            self.exit(plot)
-        self.situation = situation.name
+            self._exit(plot)
+        self.situation = (situation.series.name, situation.name)
         self.add_message(situation.trigger(self, 'on_enter'))
         self.add_message(situation.content)
 
-    def exit(self, plot):
+    def _exit(self, plot):
         if self.situation is not None:
             self.add_message(self.current(plot).trigger(self, 'on_exit'))
             self.situation = None
@@ -289,13 +294,17 @@ class PlotState(object):
     def replace(self, plot, situation):
         if isinstance(situation, basestring):
             situation = self.parse_address(plot, situation)
-        self.exit(plot)
-        self.stack[-1] = situation.series.name
-        self.enter(plot, situation, exit=False)
+        self._exit(plot)
+        self.stack[-1] = (situation.series.name, situation.name)
+        self._enter(plot, situation, exit=False)
 
     def current(self, plot):
         try:
-            current = plot.by_name[self.top].by_name[self.situation].prepare(self)
+            series, situation = self.top
+            if situation is not None:
+                current = plot.by_name[series].by_name[situation].prepare(self)
+            else:
+                current = plot.by_name[series].ordered[0].prepare(self)
             return current
         except IndexError:
             return None

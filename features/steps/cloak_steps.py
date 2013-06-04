@@ -38,8 +38,8 @@ def start_plot_state_step(context):
 @then(u'I am in the "{situation}" situation of "{series}"')
 def check_situation_step(context, situation, series):
     state = context.state
-    assert state.stack[-1] == series, (state.situation, state.stack[-1])
-    assert state.situation == situation, (state.situation, state.stack[-1])
+    assert state.stack[-1] == (series, situation), (state.situation, state.stack[-1])
+    assert state.situation == (series, situation), (state.situation, state.stack[-1])
 
 
 @then(u'the "{flag_name}" flag should be "{state}"')
