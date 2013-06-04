@@ -50,4 +50,4 @@ Feature: Cloak of Darkness
     When I choose "south"
     And I choose "fumble around for a light"
     Then I am in the "fumble around" situation of "actions"
-    And the last message says "You fumble around in the dark, but to no avail."
+    And the last message says "You fumble around in the dark, but to no avail.\n\n[Continue...](Continue...)"

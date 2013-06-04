@@ -56,11 +56,12 @@ def story(action=None):
 
     print "At end:", state.situation, state.top
     print state.stack
-    print state.current(plot).content
     state.clear()
     session['state'] = msgpack.dumps(state.to_dict())
 
-    return markdown.markdown(u'\n\n'.join(state.messages) if state.messages else state.current(plot).content)
+    story = markdown.markdown(u'\n\n'.join(state.messages) if state.messages else state.current(plot).content)
+
+    return render_template('story.html', story=story)
 
 
 def main():
