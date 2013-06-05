@@ -19,8 +19,8 @@ def slugify(name):
 class StoryParser(object):
     event_map = {
         '# =': 'new_section',
-        '# !': 'comment',
-        '## !': 'comment',
+        '# %': 'comment',
+        '## %': 'comment',
         '## >': 'directive',
     }
 

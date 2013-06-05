@@ -7,4 +7,6 @@ from paver.easy import task, sh, consume_args
 @task
 @consume_args
 def start(args):
-    sh('./bin/storyline start --debug features/steps/data/cloak/')
+    if not args:
+        args = ("--debug", "features/steps/data/cloak/")
+    sh('./bin/storyline start %s' % ' '.join(args))

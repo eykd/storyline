@@ -18,12 +18,12 @@ Feature: Story file
 
       # = side_street
 
-      ## ! This is a comment.
+      ## % This is a comment.
 
       A side street. Many tradesmen operate their businesses off this street. Shingles hang above each door.
 
       ## > on_enter
-      ## ! This is a directive for when the situation is entered.
+      ## % This is a directive for when the situation is entered.
       foo = 1
       """
     When we read the file
