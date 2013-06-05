@@ -2,6 +2,7 @@
 """storyline.states -- state machines for telling stories.
 """
 import re
+import inspect
 from collections import defaultdict
 import logging
 
@@ -11,6 +12,8 @@ from jinja2 import Environment
 environment = Environment(
     line_statement_prefix = u'%',
     line_comment_prefix = u'!!',
+    trim_blocks = True,
+    lstrip_blocks = True,
 )
 
 logger = logging.getLogger('storyline')
@@ -49,7 +52,11 @@ class Situation(object):
 
     @property
     def address(self):
-        return u'%s::%s' % (self.series.name, self.name)
+        return u'%s::%s' % self.pair
+
+    @property
+    def pair(self):
+        return (self.series.name, self.name)
 
     @property
     def template(self):
@@ -168,19 +175,38 @@ class Plot(object):
             name = unicode(fp.relpath(p).splitext()[0])
             self.add_series(parser.parse(name, fp.text()))
 
-    def make_state(self):
+    def make_state(self, push=True):
         state = PlotState()
-        state.push(self, 'start')
+        if push:
+            state.push(self, 'start')
         return state
 
 
-class ContextState(dict):
-    def __init__(self):
-        pass
+class ContextMixin(object):
+    def __getattribute__(self, name):
+        """Coerce methods that return None to return the empty string.
+        """
+        value = object.__getattribute__(self, name)
+        if inspect.isbuiltin(value) and hasattr(value, '__call__'):
+            def wrapper(*args, **kwargs):
+                result = value(*args, **kwargs)
+                if result is None:
+                    return u''
+                else:
+                    return result
+            return wrapper
+        else:
+            return value
 
+
+class ContextState(ContextMixin, dict):
     def set(self, key, value):
         self[key] = value
         return u''
+
+
+class ContextSet(ContextMixin, set):
+    pass
 
 
 class PlotState(object):
@@ -188,7 +214,7 @@ class PlotState(object):
         self.stack = []
         self.situation = None
         self.messages = []
-        self.inventory = set()
+        self.inventory = ContextSet()
         self.this = ContextState()
         self.locations = defaultdict(ContextState)
 
@@ -196,14 +222,15 @@ class PlotState(object):
         return u"<PlotState: %s::%s>" % (u', '.join(self.stack), self.situation)
 
     @classmethod
-    def from_dict(cls, plot, d):
-        state = plot.make_state()
+    def from_dict(cls, plot, d=None):
+        logger.debug("Creating PlotState from %s", d)
+        state = plot.make_state(push=(not d))
         state.stack[:] = d.get('stack', (('start', None), ))
         for n, item in enumerate(state.stack):
             if isinstance(item, basestring):
                 state.stack[n] = (item, None)
         state.situation = d.get('situation', None)
-        state.inventory = set(d.get('inventory', ()))
+        state.inventory = ContextSet(d.get('inventory', ()))
         state.this.update(d.get('this', {}))
         state.locations.update(d.get('locations', {}))
         return state
@@ -233,7 +260,8 @@ class PlotState(object):
             'push': lambda a: self.push(plot, a) or u'',
             'pop': lambda: self.pop(plot) or u'',
             'replace': lambda a: self.replace(plot, a) or u'',
-            'select': lambda a: self.replace(plot, a) or u''
+            'select': lambda a: self.replace(plot, a) or u'',
+            'reset': lambda a=None: self.reset(plot, a) or u''
         }
 
     def parse_address(self, plot, address):
@@ -262,13 +290,16 @@ class PlotState(object):
 
     def add_message(self, message, plot=None):
         if message and message.strip():
-            self.messages.append(message.rstrip().lstrip(u'\n'))
+            message = message.rstrip().lstrip(u'\n')
+            logger.debug("New message:\n %s\n", message)
+            self.messages.append(message)
+            logger.debug("Messages: %s", self.messages)
 
     def push(self, plot, situation):
         if isinstance(situation, basestring):
             situation = self.parse_address(plot, situation)
         self._exit(plot)
-        self.stack.append((situation.series.name, situation.name))
+        self.stack.append(situation.pair)
         self._enter(plot, situation, exit=False)
 
     def pop(self, plot):
@@ -278,6 +309,22 @@ class PlotState(object):
             self.push(plot, 'start')
         else:
             self._enter(plot)
+
+    def replace(self, plot, situation):
+        if isinstance(situation, basestring):
+            situation = self.parse_address(plot, situation)
+        self._exit(plot)
+        self.stack[-1] = situation.pair
+        self._enter(plot, situation, exit=False)
+
+    def reset(self, plot, situation=None):
+        if situation is None:
+            situation = 'start'
+        if isinstance(situation, basestring):
+            situation = self.parse_address(plot, situation)
+        self._exit(plot)
+        self.stack[:] = (situation.pair, )
+        self._enter(plot, situation, exit=False)
 
     def _enter(self, plot, situation=None, exit=True):
         if situation is None:
@@ -290,7 +337,7 @@ class PlotState(object):
             situation = situation.prepare(self)
         if exit:
             self._exit(plot)
-        self.situation = (situation.series.name, situation.name)
+        self.situation = situation.pair
         self.add_message(situation.trigger(self, 'on_enter'))
         self.add_message(situation.content)
 
@@ -298,13 +345,6 @@ class PlotState(object):
         if self.situation is not None:
             self.add_message(self.current(plot).trigger(self, 'on_exit'))
             self.situation = None
-
-    def replace(self, plot, situation):
-        if isinstance(situation, basestring):
-            situation = self.parse_address(plot, situation)
-        self._exit(plot)
-        self.stack[-1] = (situation.series.name, situation.name)
-        self._enter(plot, situation, exit=False)
 
     def current(self, plot):
         try:

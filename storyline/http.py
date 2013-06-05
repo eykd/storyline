@@ -27,6 +27,8 @@ app = Flask(__name__)
 plot = states.Plot()
 app.secret_key = 'foobar'
 
+logger = logging.getLogger('http')
+
 
 @app.route("/")
 def hello():
@@ -36,10 +38,14 @@ def hello():
 @app.route("/story/", methods=['GET', 'POST'])
 @app.route("/story/<action>", methods=['GET'])
 def story(action=None):
+    logger.debug("########## Starting /story/")
     session.permanent = True
     state = session.get('state', None)
+    if state is not None:
+        state = msgpack.loads(state)
     try:
-        state = states.PlotState.from_dict(plot, msgpack.loads(state))
+        state = states.PlotState.from_dict(plot, state)
+        state.clear()
     except:
         state = plot.make_state()
 
@@ -49,12 +55,27 @@ def story(action=None):
     if action is not None:
         state.choose(plot, action)
 
-    state.clear()
+    if state.messages:
+        story_text = u'\n\n'.join(m for m in state.messages
+                                  if m is not None and m.strip())
+    else:
+        story_text = state.current(plot).content
+    logger.debug("#### The Story:\n%s", story_text)
+    story = markdown.markdown(story_text)
     session['state'] = msgpack.dumps(state.to_dict())
 
-    story = markdown.markdown(u'\n\n'.join(state.messages) if state.messages else state.current(plot).content)
+    logger.debug("########## Fin.")
 
     return render_template('story.html', story=story)
+
+
+@app.route("/reset/", methods=['GET'])
+def reset():
+    session.permanent = True
+    session['state'] = u''
+    del session['state']
+
+    return redirect(url_for('story'))
 
 
 def main():
