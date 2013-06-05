@@ -3,12 +3,11 @@
 ## The hook
 
 It's just a small brass hook, screwed to the wall.
-% if this.get("wearing cloak"):
+{% if this.get("wearing cloak") %}
 Useful for [hanging things](!) on it.
-% else:
+{% else %}
 Your [opera cloak](!) is hanging on it.
-% endif
-
+{% endif %}
 
 [Continue...](pop!)
 
@@ -26,6 +25,8 @@ Your [opera cloak](!) is hanging on it.
 The message, neatly marked in the sawdust, reads...
 
 **You have won**
+
+[Start over.](reset!)
 
 
 # = Opera Cloak
