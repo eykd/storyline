@@ -9,16 +9,21 @@ Options:
   -l --listen=ADDRESS   Address and port to listen on [default: localhost:5000]
   -d --debug            Run in DEBUG mode.
 """
+import sys
 import logging
 
 from docopt import docopt
 
 import msgpack
 import markdown
+from typogrify.filters import typogrify
 
 from flask import (Flask, request, session, g, redirect,
                    url_for, abort, render_template, flash)
 
+from watchdog.observers import Observer
+from watchdog.events import LoggingEventHandler
+from watchdog.events import FileSystemEventHandler
 
 from . import states
 
@@ -61,7 +66,8 @@ def story(action=None):
     else:
         story_text = state.current(plot).content
     logger.debug("#### The Story:\n%s", story_text)
-    story = markdown.markdown(story_text)
+    story_text = markdown.markdown(story_text)
+    story = typogrify(story_text)
     session['state'] = msgpack.dumps(state.to_dict())
 
     logger.debug("########## Fin.")
@@ -78,19 +84,44 @@ def reset():
     return redirect(url_for('story'))
 
 
+class Reloader(FileSystemEventHandler):
+    def __init__(self, plot, story_path):
+        self.plot = plot
+        self.path = story_path
+        super(Reloader, self).__init__()
+
+    def on_any_event(self, event):
+        if not event.is_directory and event.src_path.endswith('.story'):
+            logger.debug("%s changed. Reloading." % event.src_path)
+            self.plot.load_path(self.path)
+
+
 def main():
     arguments = docopt(__doc__, version='Storyline HTTP v0.1')
 
     if arguments.get('--debug'):
-        logging.basicConfig(level=logging.DEBUG)
+        logger = logging.getLogger()
+        logger.setLevel(logging.DEBUG)
+        handler = logging.StreamHandler(sys.stderr)
+        logger.addHandler(handler)
 
     app.config.from_object(__name__)
-
-    plot.load_path(arguments.get('STORY_PATH', '.'))
-
     app.debug = arguments.get('--debug')
 
-    app.run()
+    story_path = arguments.get('STOROY_PATH', '.')
+
+    plot.load_path(story_path)
+
+    observer = Observer()
+    observer.schedule(LoggingEventHandler(), path=story_path, recursive=True)
+    observer.schedule(Reloader(plot, story_path), path=story_path, recursive=True)
+
+    observer.start()
+    try:
+        app.run()
+    finally:
+        observer.stop()
+        observer.join()
 
 
 if __name__ == "__main__":

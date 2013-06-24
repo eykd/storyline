@@ -102,11 +102,14 @@ class Situation(object):
                         d = Directive(text, u'')
                         d.situation = self
                         directives[text] = d
+                elif target.startswith('!'):
+                    action = 'trigger'
+                    obj = target[1:]
                 else:
                     action, obj = target.split('!', 1)
                     script = u'{{{{ {action}({obj}) }}}}'.format(
                         action=action,
-                        obj=u'"{}"'.format(obj) if obj.strip() else u''
+                        obj=u'"{}"'.format(obj) if obj.strip() else u'#'
                     )
                     d = Directive(text, script)
                     d.situation = self
@@ -214,7 +217,7 @@ class PlotState(object):
         self.stack = []
         self.situation = None
         self.messages = []
-        self.inventory = ContextSet()
+        self.flags = ContextSet()
         self.this = ContextState()
         self.locations = defaultdict(ContextState)
 
@@ -230,7 +233,7 @@ class PlotState(object):
             if isinstance(item, basestring):
                 state.stack[n] = (item, None)
         state.situation = d.get('situation', None)
-        state.inventory = ContextSet(d.get('inventory', ()))
+        state.flags = ContextSet(d.get('flags', ()))
         state.this.update(d.get('this', {}))
         state.locations.update(d.get('locations', {}))
         return state
@@ -239,7 +242,7 @@ class PlotState(object):
         return {
             'stack': self.stack,
             'situation': self.situation,
-            'inventory': list(self.inventory),
+            'flags': list(self.flags),
             'this': dict(self.this),
             'locations': dict(self.locations),
         }
@@ -252,7 +255,7 @@ class PlotState(object):
         return {
             # Local context objects
             'this': self.this,
-            'inventory': self.inventory,
+            'flags': self.flags,
             'here': self.locations[situation.address],
             'elsewhere': self.locations,
 
@@ -282,6 +285,7 @@ class PlotState(object):
                 else:
                     series_name = address
                     situation_name = None
+
         series = plot.by_name[series_name]
         return series.by_name[situation_name] if situation_name else series.ordered[0]
 

@@ -1,5 +1,6 @@
 webassets
 markdown
+typogrify
 path.py
 flask
 Jinja2
@@ -8,3 +9,4 @@ mako
 path.py
 docopt
 msgpack-python
+watchdog
