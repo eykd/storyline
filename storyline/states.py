@@ -5,6 +5,7 @@ import re
 import inspect
 from collections import defaultdict
 import logging
+import urllib
 
 from path import path
 from jinja2 import Environment
@@ -22,6 +23,7 @@ logger = logging.getLogger('storyline')
 class Series(object):
     def __init__(self, name):
         self.name = name
+        self.parent = path(name).parent
         self.content = u''
         self.ordered = []
         self.by_name = {}
@@ -109,12 +111,12 @@ class Situation(object):
                     action, obj = target.split('!', 1)
                     script = u'{{{{ {action}({obj}) }}}}'.format(
                         action=action,
-                        obj=u'"{}"'.format(obj) if obj.strip() else u'#'
+                        obj=u'"{}"'.format(obj.strip()) if obj.strip() else u''
                     )
                     d = Directive(text, script)
                     d.situation = self
                     directives[text] = d
-                new_content.append(u'[{text}]({text})'.format(text=text))
+                new_content.append(u'[{text}]({url})'.format(text=text, url=urllib.quote(text)))
         try:
             new_content.append(content[start:])
         except IndexError:
@@ -129,9 +131,9 @@ class Situation(object):
         self.directives[directive.name] = directive
         directive.situation = self
 
-    def trigger(self, state, directive):
+    def trigger(self, state, directive, *args, **kwargs):
         try:
-            return self.directives[directive].execute(self, state)
+            return self.directives[directive].execute(self, state, *args, **kwargs)
         except KeyError:
             pass
 
@@ -151,7 +153,10 @@ class Directive(object):
             self._template = environment.from_string(self.content)
         return self._template
 
-    def execute(self, situation, state):
+    def execute(self, situation, state, *args, **kwargs):
+        context = state.context(situation.series.plot, situation)
+        context['args'] = args
+        context['kwargs'] = kwargs
         return self.template.render(**state.context(situation.series.plot, situation))
 
 
@@ -268,10 +273,10 @@ class PlotState(object):
         }
 
     def parse_address(self, plot, address):
+        current_situation = self.current(plot)
         if '::' in address:
             series_name, situation_name = address.split(u'::')
         else:
-            current_situation = self.current(plot)
             if current_situation is None:
                 # Must be a straight up series name.
                 series_name = address
@@ -286,6 +291,8 @@ class PlotState(object):
                     series_name = address
                     situation_name = None
 
+        if series_name not in plot.by_name:
+            series_name = unicode(current_series.parent / series_name)
         series = plot.by_name[series_name]
         return series.by_name[situation_name] if situation_name else series.ordered[0]
 
@@ -298,6 +305,9 @@ class PlotState(object):
             logger.debug("New message:\n %s\n", message)
             self.messages.append(message)
             logger.debug("Messages: %s", self.messages)
+
+    def trigger(self, plot, directive, *args, **kwargs):
+        return self.current(plot).trigger(self, directive, *args, **kwargs)
 
     def push(self, plot, situation):
         if isinstance(situation, basestring):
