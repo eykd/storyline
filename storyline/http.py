@@ -55,10 +55,12 @@ def story(action=None):
         state = plot.make_state()
 
     if request.method == 'POST':
-        action = request.form.get('action', action)
-
-    if action is not None:
-        state.choose(plot, action)
+        if action is None:
+            action = request.form.get('action', action)
+        state.trigger(plot, action, **request.form)
+    else:
+        if action is not None:
+            state.choose(plot, action)
 
     if state.messages:
         story_text = u'\n\n'.join(m for m in state.messages
