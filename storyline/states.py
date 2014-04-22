@@ -438,7 +438,14 @@ class PlotState(object):
         if isinstance(situation, basestring):
             situation = self.get_situation_by_address(plot, situation)
         self._exit(plot)
+
+        # Clear all state
         self.stack[:] = (situation.pair, )
+        self.situation = None
+        self.flags.clear()
+        self.this.clear()
+        self.locations.clear()
+
         self._enter(plot, situation, exit=False)
 
     def _enter(self, plot, situation=None, exit=True):
