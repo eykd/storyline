@@ -13,3 +13,7 @@ You put the velvet cloak on the small brass hook.
 You fumble around in the dark, but to no avail.
 
 [Continue...](pop!)
+
+## > on_enter
+
+{{ this.incr('fumbled') }}

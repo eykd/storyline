@@ -26,6 +26,10 @@ The message, neatly marked in the sawdust, reads...
 
 **You have won**
 
+{% if this.fumbled %}
+But you fumbled {{ this.fumbled }} times!
+{% endif %}
+
 [Start over.](reset!)
 
 
