@@ -25,7 +25,7 @@ Feature: Cloak of Darkness
   Scenario: on_enter initialization
     Given I am in the "intro" situation of "start"
     Then the "wearing cloak" flag should be "True" (bool)
-    And the last message says "Hurrying through the rainswept November night, you're glad to see the bright\nlights of the Opera House. It's surprising that there aren't more people about\nbut, hey, what do you expect in a cheap demo game...?\n\n[Onward!](Onward!)"
+    And the last message says "Hurrying through the rainswept November night, you're glad to see the bright\nlights of the Opera House. It's surprising that there aren't more people about\nbut, hey, what do you expect in a cheap demo game...?\n\n[Onward!](Onward%21)"
 
   Scenario: Navigation to Cloakroom
     Given I am in the "intro" situation of "start"
