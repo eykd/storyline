@@ -50,7 +50,7 @@ def story(action=None):
         state = msgpack.loads(state)
     try:
         state = states.PlotState.from_dict(plot, state)
-        state.clear()
+        state.clear_messages()
     except:
         state = plot.make_state()
 

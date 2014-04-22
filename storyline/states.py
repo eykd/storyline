@@ -21,6 +21,10 @@ logger = logging.getLogger('storyline')
 
 
 class Series(object):
+    """Represent an ordered collection of Situations.
+
+    This collection usually corresponds to a single .story file.
+    """
     def __init__(self, name):
         self.name = name
         self.parent = path(name).parent
@@ -29,6 +33,8 @@ class Series(object):
         self.by_name = {}
 
     def add_situation(self, situation):
+        """Add a situation to the Series.
+        """
         if self.ordered:
             ps = self.ordered[-1]
             ps.next = situation
@@ -38,10 +44,12 @@ class Series(object):
         situation.series = self
 
     def __repr__(self):
-        return u"<Series: %s>" % self.name
+        return u"<Series: {}>".format(self.name)
 
 
 class Situation(object):
+    """A story state, with corresponding transition directives.
+    """
     def __init__(self, name):
         self.name = name
         self.content = u''
@@ -50,18 +58,24 @@ class Situation(object):
         self.prepared = False
 
     def __repr__(self):
-        return u"<Situation: %s>" % self.address
+        return u"<Situation: {}>".format(self.address)
 
     @property
     def address(self):
-        return u'%s::%s' % self.pair
+        """Return the canonical string which identifies this situation.
+        """
+        return u'{0}::{0}'.format(self.pair)
 
     @property
     def pair(self):
+        """Return the canonical 2-tuple which identifies this situation.
+        """
         return (self.series.name, self.name)
 
     @property
     def template(self):
+        """Return the Jinja2 template for building the Situation's content.
+        """
         if not hasattr(self, '_template'):
             self._template = environment.from_string(self.content)
         return self._template
@@ -81,10 +95,16 @@ class Situation(object):
     link_cp = re.compile(r'\[(?P<text>.+?)\]\((?P<target>.+?)\)', re.MULTILINE)
 
     def get_directives(self, content, state):
+        """Identify and parse directives from Markdown links in the given content.
+
+        Return a 2-tuple of a Directives dict and transformed content which
+        properly address the directives in the dict.
+        """
         directives = dict((n, d) for n, d in self.directives.iteritems()
                           if n.startswith('on_'))
         new_content = []
         start = 0
+        # Find all links of the form `[anchor text](directive)`:
         for match in self.link_cp.finditer(content):
             new_content.append(content[start:match.start()])
             start = match.end()
@@ -96,6 +116,7 @@ class Situation(object):
             else:
                 # We need to parse an inline directive.
                 if target == '!':
+                    # !: Trigger an event of the same name as anchor text
                     if text in directives:
                         pass
                     elif text in self.directives:
@@ -105,9 +126,11 @@ class Situation(object):
                         d.situation = self
                         directives[text] = d
                 elif target.startswith('!'):
+                    # !event: Trigger the event named
                     action = 'trigger'
                     obj = target[1:]
                 else:
+                    # action!arg: Call the action with the given argument
                     action, obj = target.split('!', 1)
                     script = u'{{{{ {action}({obj}) }}}}'.format(
                         action=action,
@@ -124,14 +147,18 @@ class Situation(object):
         return directives, u''.join(new_content)
 
     def add_directive(self, directive):
+        """Add the given directive to the Situation.
+        """
         if directive.name in self.directives:
-            raise NameError("Directive with name `%s` already defined on `%s`" % (
+            raise NameError("Directive with name `{}` already defined on `{}`".format(
                 directive.name, self.situation.name
             ))
         self.directives[directive.name] = directive
         directive.situation = self
 
     def trigger(self, state, directive, *args, **kwargs):
+        """Trigger the given directive (by name), executing it on the given state.
+        """
         try:
             return self.directives[directive].execute(self, state, *args, **kwargs)
         except KeyError:
@@ -139,8 +166,12 @@ class Situation(object):
 
 
 class Directive(object):
+    """An event that may be triggered in a Situation.
+
+    Directives has content that may or may not include side-effects.
+    """
     def __repr__(self):
-        return u"<Directive: %s::%s>" % (self.situation.address, self.name)
+        return u"<Directive: {}::{}>".format(self.situation.address, self.name)
 
     def __init__(self, name, content=u''):
         self.name = name
@@ -149,11 +180,15 @@ class Directive(object):
 
     @property
     def template(self):
+        """Return the Jinja2 template for building the Situation's content.
+        """
         if not hasattr(self, '_template'):
             self._template = environment.from_string(self.content)
         return self._template
 
     def execute(self, situation, state, *args, **kwargs):
+        """Execute the directive within the given situation and state.
+        """
         context = state.context(situation.series.plot, situation)
         context['args'] = args
         context['kwargs'] = kwargs
@@ -161,6 +196,8 @@ class Directive(object):
 
 
 class Plot(object):
+    """The Plot manages all Series and manufactures state for the current story.
+    """
     def __init__(self, *series):
         self.by_name = {}
         self.add_series(*series)
@@ -179,7 +216,7 @@ class Plot(object):
 
         p = path(p).expand().abspath()
         for fp in p.walkfiles('*.story'):
-            logger.info("Loading %s" % fp)
+            logger.info("Loading {}".format(fp))
             name = unicode(fp.relpath(p).splitext()[0])
             self.add_series(parser.parse(name, fp.text()))
 
@@ -191,6 +228,10 @@ class Plot(object):
 
 
 class ContextMixin(object):
+    """Mixin for data structures used within template contexts.
+
+    Wraps methods on the object to return the empty string instead of None.
+    """
     def __getattribute__(self, name):
         """Coerce methods that return None to return the empty string.
         """
@@ -208,16 +249,50 @@ class ContextMixin(object):
 
 
 class ContextState(ContextMixin, dict):
+    """A context-ready dict with superpowers.
+    """
     def set(self, key, value):
         self[key] = value
         return u''
 
+    def incr(self, key, value=1):
+        """Increment a numeric value.
+        """
+        try:
+            self[key] += value
+        except TypeError:
+            raise TypeError('Tried to increment non-numeric key {!r} ({!r}) by {}'.format(
+                key, self[key], value
+            ))
+        except KeyError:
+            self[key] = value
+
+        return u''
+
+    def decr(self, key, value=1):
+        """Decrement a numeric value.
+        """
+        try:
+            self[key] -= value
+        except TypeError:
+            raise TypeError('Tried to derement non-numeric key {!r} ({!r}) by {}'.format(
+                key, self[key], value
+            ))
+        except KeyError:
+            self[key] = -value
+
+        return u''
+
 
 class ContextSet(ContextMixin, set):
+    """A context-ready set.
+    """
     pass
 
 
 class PlotState(object):
+    """The master state object for a current story.
+    """
     def __init__(self, start=None):
         self.stack = []
         self.situation = None
@@ -227,11 +302,13 @@ class PlotState(object):
         self.locations = defaultdict(ContextState)
 
     def __repr__(self):
-        return u"<PlotState: %s::%s>" % (u', '.join(self.stack), self.situation)
+        return u"<PlotState: {}::{}>".format(u', '.join(self.stack), self.situation)
 
     @classmethod
     def from_dict(cls, plot, d=None):
-        logger.debug("Creating PlotState from %s", d)
+        """Restore state from a dict (usually created by `.to_dict()`).
+        """
+        logger.debug("Creating PlotState from {}".format(d))
         state = plot.make_state(push=(not d))
         state.stack[:] = d.get('stack', (('start', None), ))
         for n, item in enumerate(state.stack):
@@ -244,6 +321,8 @@ class PlotState(object):
         return state
 
     def to_dict(self):
+        """Boil the current state down to simple data structures.
+        """
         return {
             'stack': self.stack,
             'situation': self.situation,
@@ -254,9 +333,13 @@ class PlotState(object):
 
     @property
     def top(self):
+        """Return the top situation in the stack.
+        """
         return self.stack[-1]
 
     def context(self, plot, situation):
+        """Return template context based on the current state.
+        """
         return {
             # Local context objects
             'this': self.this,
@@ -272,7 +355,11 @@ class PlotState(object):
             'reset': lambda a=None: self.reset(plot, a) or u''
         }
 
-    def parse_address(self, plot, address):
+    def get_situation_by_address(self, plot, address):
+        """Return the situation identified by the address.
+
+        Addresses take the form of `series::situation`.
+        """
         current_situation = self.current(plot)
         if '::' in address:
             series_name, situation_name = address.split(u'::')
@@ -296,27 +383,37 @@ class PlotState(object):
         series = plot.by_name[series_name]
         return series.by_name[situation_name] if situation_name else series.ordered[0]
 
-    def clear(self, plot=None):
+    def clear_messages(self, plot=None):
+        """Clear the message output buffer.
+        """
         self.messages[:] = ()
 
     def add_message(self, message, plot=None):
+        """Add a message to the output buffer.
+        """
         if message and message.strip():
             message = message.rstrip().lstrip(u'\n')
-            logger.debug("New message:\n %s\n", message)
+            logger.debug("New message:\n {}\n".format(message))
             self.messages.append(message)
-            logger.debug("Messages: %s", self.messages)
+            logger.debug("Messages: {}".format(self.messages))
 
     def trigger(self, plot, directive, *args, **kwargs):
+        """Execute the named directive on the current situation.
+        """
         return self.current(plot).trigger(self, directive, *args, **kwargs)
 
     def push(self, plot, situation):
+        """Push the situation (by address) onto the stack.
+        """
         if isinstance(situation, basestring):
-            situation = self.parse_address(plot, situation)
+            situation = self.get_situation_by_address(plot, situation)
         self._exit(plot)
         self.stack.append(situation.pair)
         self._enter(plot, situation, exit=False)
 
     def pop(self, plot):
+        """Pop the current situation off the stack.
+        """
         self._exit(plot)
         self.stack.pop()
         if not self.stack:
@@ -325,17 +422,21 @@ class PlotState(object):
             self._enter(plot)
 
     def replace(self, plot, situation):
+        """Replace the current situation on the stick with the named situation.
+        """
         if isinstance(situation, basestring):
-            situation = self.parse_address(plot, situation)
+            situation = self.get_situation_by_address(plot, situation)
         self._exit(plot)
         self.stack[-1] = situation.pair
         self._enter(plot, situation, exit=False)
 
     def reset(self, plot, situation=None):
+        """Clear the stack and start fresh with the named situation.
+        """
         if situation is None:
             situation = 'start'
         if isinstance(situation, basestring):
-            situation = self.parse_address(plot, situation)
+            situation = self.get_situation_by_address(plot, situation)
         self._exit(plot)
         self.stack[:] = (situation.pair, )
         self._enter(plot, situation, exit=False)
@@ -344,23 +445,25 @@ class PlotState(object):
         if situation is None:
             series, situation = self.top
         if situation is None:
-            situation = self.parse_address(plot, series)
+            situation = self.get_situation_by_address(plot, series)
         if isinstance(situation, basestring):
-            situation = self.parse_address(plot, situation)
+            situation = self.get_situation_by_address(plot, situation)
         if not situation.prepared:
             situation = situation.prepare(self)
         if exit:
             self._exit(plot)
         self.situation = situation.pair
-        self.add_message(situation.trigger(self, 'on_enter'))
+        self.trigger(plot, 'on_enter')
         self.add_message(situation.content)
 
     def _exit(self, plot):
         if self.situation is not None:
-            self.add_message(self.current(plot).trigger(self, 'on_exit'))
+            self.trigger(plot, 'on_exit')
             self.situation = None
 
     def current(self, plot):
+        """Return the current situation of the plot.
+        """
         try:
             series, situation = self.top
             if situation is not None:
@@ -372,4 +475,8 @@ class PlotState(object):
             return None
 
     def choose(self, plot, action):
-        self.add_message(self.current(plot).trigger(self, action))
+        """Choose (and trigger) the named action directive.
+
+        Really just a synonym for `trigger()`.
+        """
+        self.trigger(plot, action)
