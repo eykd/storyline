@@ -110,7 +110,7 @@ def main():
     app.config.from_object(__name__)
     app.debug = arguments.get('--debug')
 
-    story_path = arguments.get('STOROY_PATH', '.')
+    story_path = arguments.get('STORY_PATH', '.')
 
     plot.load_path(story_path)
 
