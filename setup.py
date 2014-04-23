@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 """setup.py -- setup file for Storyline
 """
+from ez_setup import use_setuptools
+use_setuptools()
+
 from setuptools import setup, find_packages
 
 with open('./requirements.txt') as fi:
