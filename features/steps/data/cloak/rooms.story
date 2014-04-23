@@ -14,7 +14,7 @@ The walls of this small room were clearly once lined with hooks, though now only
 
 # = bar
 
-% if this.get("wearing cloak"):
+% if I.am("wearing cloak"):
 ## Darkness
 
 It is pitch dark, and you can't see a thing. You could [back out slowly](!) or [fumble around for a light](!).

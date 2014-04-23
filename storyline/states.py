@@ -260,6 +260,14 @@ class ContextState(ContextMixin, dict):
         self[key] = value
         return u''
 
+    def am(self, key, value=None):
+        if value is None:
+            return self[key]
+        else:
+            return self.set(key, value)
+
+    are = am
+
     def incr(self, key, value=1):
         """Increment a numeric value.
         """
@@ -348,6 +356,11 @@ class PlotState(object):
         return {
             # Local context objects
             'this': self.this,
+            'I': self.this,
+            'my': self.this,
+            'we': self.this,
+            'our': self.this,
+
             'flags': self.flags,
             'here': self.locations[situation.address],
             'elsewhere': self.locations,

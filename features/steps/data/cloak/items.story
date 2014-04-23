@@ -3,7 +3,7 @@
 ## The hook
 
 It's just a small brass hook, screwed to the wall.
-{% if this.get("wearing cloak") %}
+{% if I.am("wearing cloak") %}
 Useful for [hanging things](!) on it.
 {% else %}
 Your [opera cloak](!) is hanging on it.
@@ -15,7 +15,7 @@ Your [opera cloak](!) is hanging on it.
 {{ push('actions::hang up cloak') }}
 
 ## > opera cloak
-{{ this.set("wearing cloak", True) }}
+{{ I.am("wearing cloak", True) }}
 
 
 # = message
@@ -26,8 +26,8 @@ The message, neatly marked in the sawdust, reads...
 
 **You have won**
 
-{% if this.fumbled %}
-But you fumbled {{ this.fumbled }} times!
+{% if I.fumbled %}
+But you fumbled {{ my.fumbled }} times!
 {% endif %}
 
 [Start over.](reset!)
@@ -41,4 +41,4 @@ room.
 
 ## > on_title
 
-A velvet opera cloak{% if this.get('wearing cloak') %} (being worn) {% endif %}
+A velvet opera cloak{% if I.am('wearing cloak') %} (being worn) {% endif %}
