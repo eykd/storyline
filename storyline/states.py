@@ -7,8 +7,11 @@ from collections import defaultdict
 import logging
 import urllib
 
+from configobj import ConfigObj
 from path import path
 from jinja2 import Environment
+
+from . import defaults
 
 environment = Environment(
     line_statement_prefix = u'%',
@@ -18,6 +21,8 @@ environment = Environment(
 )
 
 logger = logging.getLogger('storyline')
+
+PATH = path(__file__).abspath().dirname()
 
 
 class Series(object):
@@ -203,10 +208,13 @@ class Directive(object):
 class Plot(object):
     """The Plot manages all Series and manufactures state for the current story.
     """
+    config_spec = ConfigObj(defaults.CONFIGSPEC, list_values=False)
+
     def __init__(self, *series):
         self.by_name = {}
         self.add_series(*series)
         self.loaded = False
+        self.config = ConfigObj(configspec=self.config_spec)
 
     def add_series(self, *series):
         self.by_name.update((s.name, s) for s in series)
@@ -225,10 +233,14 @@ class Plot(object):
             name = unicode(fp.relpath(p).splitext()[0])
             self.add_series(parser.parse(name, fp.text()))
 
+        CONFIG = p / 'config.ini'
+        if CONFIG.exists():
+            self.config.merge(ConfigObj(CONFIG, configspec=self.config_spec))
+
     def make_state(self, push=True):
         state = PlotState()
         if push:
-            state.push(self, 'start')
+            state.push(self, self.config['start'])
         return state
 
 
@@ -288,7 +300,7 @@ class ContextState(ContextMixin, dict):
         try:
             self[key] -= value
         except TypeError:
-            raise TypeError('Tried to derement non-numeric key {!r} ({!r}) by {}'.format(
+            raise TypeError('Tried to decrement non-numeric key {!r} ({!r}) by {}'.format(
                 key, self[key], value
             ))
         except KeyError:
@@ -453,7 +465,7 @@ class PlotState(object):
         """Clear the stack and start fresh with the named situation.
         """
         if situation is None:
-            situation = 'start'
+            situation = plot.config['start']
         if isinstance(situation, basestring):
             situation = self.get_situation_by_address(plot, situation)
         self._exit(plot)

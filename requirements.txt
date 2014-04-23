@@ -18,6 +18,7 @@ path.py==3.1
 pathtools==0.1.2
 smartypants==1.6.0.3
 typogrify==2.0.0
+validate==1.0.1
 watchdog==0.6.0
 webassets==0.8
 wsgiref==0.1.2

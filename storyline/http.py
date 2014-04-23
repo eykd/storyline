@@ -85,7 +85,7 @@ class Reloader(FileSystemEventHandler):
         super(Reloader, self).__init__()
 
     def on_any_event(self, event):
-        if not event.is_directory and event.src_path.endswith('.story'):
+        if not event.is_directory:
             logger.debug("%s changed. Reloading." % event.src_path)
             self.plot.load_path(self.path)
 

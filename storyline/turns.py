@@ -10,9 +10,6 @@ from typogrify.filters import typogrify
 from . import states
 
 
-md_extensions = ['attr_list']
-
-
 class TurnManager(object):
     def __init__(self, plot, state_dict=None):
         self.plot = plot
@@ -36,6 +33,7 @@ class TurnManager(object):
             story_text = self.state.current(self.plot).content
 
         logger.debug("#### The Story:\n%s", story_text)
+        md_extensions = self.plot.config['markdown']['extensions']
         story_text = markdown.markdown(story_text, extensions=md_extensions)
         story = typogrify(story_text)
 
