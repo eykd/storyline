@@ -22,8 +22,6 @@ environment = Environment(
 
 logger = logging.getLogger('storyline')
 
-PATH = path(__file__).abspath().dirname()
-
 
 class Series(object):
     """Represent an ordered collection of Situations.
@@ -208,34 +206,16 @@ class Directive(object):
 class Plot(object):
     """The Plot manages all Series and manufactures state for the current story.
     """
-    config_spec = ConfigObj(defaults.CONFIGSPEC, list_values=False)
-
     def __init__(self, *series):
         self.by_name = {}
         self.add_series(*series)
         self.loaded = False
-        self.config = ConfigObj(configspec=self.config_spec)
+        self.config = ConfigObj(configspec=defaults.CONFIG_SPEC)
 
     def add_series(self, *series):
         self.by_name.update((s.name, s) for s in series)
         for s in series:
             s.plot = self
-
-    def load_path(self, p):
-        """Load all the series definitions in the given path.
-        """
-        from .storyfile import StoryParser
-        parser = StoryParser()
-
-        p = path(p).expand().abspath()
-        for fp in p.walkfiles('*.story'):
-            logger.info("Loading {}".format(fp))
-            name = unicode(fp.relpath(p).splitext()[0])
-            self.add_series(parser.parse(name, fp.text()))
-
-        CONFIG = p / 'config.ini'
-        if CONFIG.exists():
-            self.config.merge(ConfigObj(CONFIG, configspec=self.config_spec))
 
     def make_state(self, push=True):
         state = PlotState()

@@ -24,6 +24,7 @@ from watchdog.observers import Observer
 from watchdog.events import LoggingEventHandler
 from watchdog.events import FileSystemEventHandler
 
+from . import storyfile
 from . import states
 from . import turns
 
@@ -87,7 +88,7 @@ class Reloader(FileSystemEventHandler):
     def on_any_event(self, event):
         if not event.is_directory:
             logger.debug("%s changed. Reloading." % event.src_path)
-            self.plot.load_path(self.path)
+            storyfile.load_path(self.path, self.plot)
 
 
 def main():
@@ -104,7 +105,7 @@ def main():
 
     story_path = arguments.get('STORY_PATH', '.')
 
-    plot.load_path(story_path)
+    storyfile.load_path(story_path, plot)
 
     observer = Observer()
     observer.schedule(LoggingEventHandler(), path=story_path, recursive=True)

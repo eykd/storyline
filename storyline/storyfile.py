@@ -1,12 +1,16 @@
 # -*- coding: utf-8 -*-
 """storyline.storyfile -- reader for the special storyfile format.
 """
-import collections
 import re
-
 import warnings
+import logging
+logger = logging.getLogger('storyline')
 
-from . states import Series, Situation, Directive
+from path import path
+from configobj import ConfigObj
+
+from . import defaults
+from .states import Series, Situation, Directive
 
 _spaces_cp = re.compile(' +')
 _slugsub_cp = re.compile(r'\W')
@@ -118,3 +122,19 @@ class ParserState(object):
         d = Directive(name)
         self.directive = d
         self.situation.add_directive(d)
+
+
+def load_path(story_path, plot):
+    """Load all the series definitions in the given path.
+    """
+    parser = StoryParser()
+
+    p = path(story_path).expand().abspath()
+    for fp in p.walkfiles('*.story'):
+        logger.info("Loading {}".format(fp))
+        name = unicode(fp.relpath(p).splitext()[0])
+        plot.add_series(parser.parse(name, fp.text()))
+
+    CONFIG = p / 'config.ini'
+    if CONFIG.exists():
+        plot.config.merge(ConfigObj(CONFIG, configspec=defaults.CONFIG_SPEC))
