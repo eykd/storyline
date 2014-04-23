@@ -360,6 +360,7 @@ class PlotState(object):
 
         Addresses take the form of `series::situation`.
         """
+        current_series = None
         current_situation = self.current(plot)
         if '::' in address:
             series_name, situation_name = address.split(u'::')
@@ -378,7 +379,7 @@ class PlotState(object):
                     series_name = address
                     situation_name = None
 
-        if series_name not in plot.by_name:
+        if series_name not in plot.by_name and current_series is not None:
             series_name = unicode(current_series.parent / series_name)
         series = plot.by_name[series_name]
         return series.by_name[situation_name] if situation_name else series.ordered[0]
