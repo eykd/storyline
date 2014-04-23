@@ -366,16 +366,21 @@ class PlotState(object):
         """Return template context based on the current state.
         """
         return {
-            # Local context objects
+            # Local context object synonyms
             'this': self.this,
+            'its': self.this,
             'I': self.this,
             'my': self.this,
             'we': self.this,
             'our': self.this,
+            'he': self.this,
+            'his': self.this,
+            'she': self.this,
 
-            'flags': self.flags,
             'here': self.locations[situation.address],
             'elsewhere': self.locations,
+
+            'flags': self.flags,
 
             # Local context actions
             'push': lambda a: self.push(plot, a) or u'',
