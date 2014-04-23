@@ -11,12 +11,11 @@ Options:
 """
 import sys
 import logging
+import urllib
 
 from docopt import docopt
 
 import msgpack
-import markdown
-from typogrify.filters import typogrify
 
 from flask import (Flask, request, session, g, redirect,
                    url_for, abort, render_template, flash)
@@ -26,6 +25,7 @@ from watchdog.events import LoggingEventHandler
 from watchdog.events import FileSystemEventHandler
 
 from . import states
+from . import turns
 
 
 app = Flask(__name__)
@@ -48,29 +48,21 @@ def story(action=None):
     state = session.get('state', None)
     if state is not None:
         state = msgpack.loads(state)
-    try:
-        state = states.PlotState.from_dict(plot, state)
-        state.clear_messages()
-    except:
-        state = plot.make_state()
 
+    turn = turns.TurnManager(plot, state)
+
+    action_kwargs = {}
     if request.method == 'POST':
         if action is None:
             action = request.form.get('action', action)
-        state.trigger(plot, action, **request.form)
-    else:
-        if action is not None:
-            state.choose(plot, action)
+        action_kwargs.update(request.form)
 
-    if state.messages:
-        story_text = u'\n\n'.join(m for m in state.messages
-                                  if m is not None and m.strip())
-    else:
-        story_text = state.current(plot).content
-    logger.debug("#### The Story:\n%s", story_text)
-    story_text = markdown.markdown(story_text)
-    story = typogrify(story_text)
-    session['state'] = msgpack.dumps(state.to_dict())
+    if action is not None:
+        action = urllib.unquote_plus(action)
+
+    story, state = turn.take_turn(action, **action_kwargs)
+
+    session['state'] = msgpack.dumps(state)
 
     logger.debug("########## Fin.")
 
