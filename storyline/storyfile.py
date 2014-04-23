@@ -130,7 +130,7 @@ def load_path(story_path, plot):
     parser = StoryParser()
 
     p = path(story_path).expand().abspath()
-    for fp in p.walkfiles('*.story'):
+    for fp in p.walkfiles('*.md'):
         logger.info("Loading {}".format(fp))
         name = unicode(fp.relpath(p).splitext()[0])
         plot.add_series(parser.parse(name, fp.text()))
