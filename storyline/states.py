@@ -133,13 +133,18 @@ class Situation(object):
                     # action!arg: Call the action with the given argument
                     action, obj = target.split('!', 1)
                     script = u'{{{{ {action}({obj}) }}}}'.format(
-                        action=action,
-                        obj=u'"{}"'.format(obj.strip()) if obj.strip() else u''
+                        action = action,
+                        obj = u'"{}"'.format(obj.strip()) if obj.strip() else u''
                     )
                     d = Directive(text, script)
                     d.situation = self
                     directives[text] = d
-                new_content.append(u'[{text}]({url})'.format(text=text, url=urllib.quote(text)))
+
+                new_content.append(
+                    u'[{text}]({url})'.format(
+                        text = text,
+                        url = urllib.quote_plus(text)
+                    ))
         try:
             new_content.append(content[start:])
         except IndexError:
