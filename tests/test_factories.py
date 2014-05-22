@@ -4,6 +4,7 @@
 import unittest
 
 from ensure import ensure
+from mock import patch
 
 
 class PlotFactoryTests(unittest.TestCase):
@@ -87,7 +88,7 @@ class SituationFactoryTests(unittest.TestCase):
         ensure(directive.name).equals("foo")
         ensure(directive.situation_name).equals(self.factory.name)
         ensure(self.factory.directives).has_length(1)
-        ensure(self.factory.directives[0]).is_(directive)
+        ensure(self.factory.directives['foo']).is_(directive)
 
     def test_it_should_build_a_situation_entity(self):
         from storyline import entities
@@ -107,6 +108,67 @@ class SituationFactoryTests(unittest.TestCase):
             'situation': situation.name,
             'content': 'blah',
         })
+
+    def test_it_should_parse_directives_with_target_already_present(self):
+        self.factory.add_directive('on_enter')
+        md_link = self.factory.parse_directive('anchor text', 'on_enter')
+        ensure(md_link).equals('[anchor text](on_enter)')
+        ensure(self.factory.directives).has_length(1)
+
+    def test_it_should_parse_directives_with_target_as_anchor_text_when_anchor_text_directive_is_present(self):
+        self.factory.add_directive('anchor text')
+
+        md_link = self.factory.parse_directive('anchor text', '!')
+
+        ensure(md_link).equals('[anchor text](anchor+text)')
+        ensure(self.factory.directives).has_length(1)
+
+    def test_it_should_parse_directives_with_target_as_anchor_text_when_anchor_text_directive_is_missing(self):
+        ensure(self.factory.directives).has_length(0)
+
+        with patch('warnings.warn') as mock_warnings:
+            md_link = self.factory.parse_directive('anchor text', '!')
+            ensure(mock_warnings.call_count).equals(1)
+
+        ensure(md_link).equals('[anchor text](anchor+text)')
+        ensure(self.factory.directives).has_length(1)
+
+    def test_it_should_parse_directives_with_action_and_arg_as_target(self):
+        ensure(self.factory.directives).has_length(0)
+
+        md_link = self.factory.parse_directive('anchor text', 'push!start')
+
+        ensure(md_link).equals('[anchor text](anchor+text)')
+        ensure(self.factory.directives).has_length(1)
+
+        directive = self.factory.directives['anchor text'].build()
+
+        ensure(directive.name).equals('anchor text')
+        ensure(directive.content).equals('{{ push("start") }}')
+
+    def test_it_should_parse_directives_with_event_trigger_as_target(self):
+        ensure(self.factory.directives).has_length(0)
+
+        md_link = self.factory.parse_directive('anchor text', '!start the macarena')
+
+        ensure(md_link).equals('[anchor text](anchor+text)')
+        ensure(self.factory.directives).has_length(1)
+
+        directive = self.factory.directives['anchor text']
+
+        ensure(directive.name).equals('anchor text')
+        ensure(directive.lines).equals(['{{ trigger("start the macarena") }}'])
+
+    def test_it_should_compile_content(self):
+        ensure(self.factory.directives).has_length(0)
+
+        self.factory.add_line("Hello world!")
+        self.factory.add_line("[Look, a plane!](!steal cookie)")
+        content = self.factory.compile_content()
+
+        ensure(content).equals("Hello world!\n[Look, a plane!](Look%2C+a+plane%21)")
+        ensure(self.factory.directives).has_length(1)
+        ensure(self.factory.directives["Look, a plane!"].lines).equals(['{{ trigger("steal cookie") }}'])
 
 
 class DirectiveFactoryTests(unittest.TestCase):
