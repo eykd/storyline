@@ -130,10 +130,9 @@ class SituationFactory(Factory):
             anchor_text, target = match.groups()
             md_link = self.parse_directive(anchor_text, target)
             new_content.append(md_link)
-        try:
-            new_content.append(content[start:])
-        except IndexError:
-            pass
+
+        new_content.append(content[start:])
+
         return u''.join(new_content)
 
     def build(self):

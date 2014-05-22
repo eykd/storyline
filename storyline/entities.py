@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
 """storyline.entities
 """
+import warnings
+
 from nonobvious import entities, fields, V
 from configobj import ConfigObj
 
+from . import templates
 
-class Directive(entities.Entity):
+
+class Directive(entities.Entity, templates.Renderable):
     """An event that may be triggered in a Situation.
 
     Directives has content that may or may not include side-effects.
@@ -14,8 +18,16 @@ class Directive(entities.Entity):
     situation = fields.String()
     content = fields.String()
 
+    def execute(self, context, *args, **kwargs):
+        """Execute the directive within the given situation and state.
+        """
+        ctx = dict(context)
+        ctx['args'] = args
+        ctx['kwargs'] = kwargs
+        return self.render(ctx)
 
-class Situation(entities.Entity):
+
+class Situation(entities.Entity, templates.Renderable):
     """A story state, with corresponding transition directives.
     """
     name = fields.String()
@@ -39,8 +51,16 @@ class Situation(entities.Entity):
         """
         return (self.series, self.name)
 
+    def trigger(self, directive, context, *args, **kwargs):
+        """Trigger the given directive (by name), executing it in the given context.
+        """
+        try:
+            return self.directives[directive].execute(context, *args, **kwargs)
+        except KeyError:
+            warnings.warn("Attempted to trigger a non-existent directive {}".format(directive))
 
-class Series(entities.Entity):
+
+class Series(entities.Entity, templates.Renderable):
     """Represent an ordered collection of Situations.
 
     This collection usually corresponds to a single .story file.
