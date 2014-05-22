@@ -64,6 +64,13 @@ class PlotEntityTests(unittest.TestCase):
             self.plot.by_name['foo'].by_name['bar']
         )
 
+    def test_it_should_get_a_situation_by_2_tuple(self):
+        ensure(
+            self.plot.get_situation_by_address(("foo", "bar"))
+        ).is_(
+            self.plot.by_name['foo'].by_name['bar']
+        )
+
     def test_it_should_get_a_situation_by_relative_address(self):
         current_situation = self.plot.by_name['foo'].by_name['bar']
         ensure(

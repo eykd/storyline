@@ -118,8 +118,16 @@ class Plot(entities.Entity):
 
     def get_situation_by_address(self, address, current_situation=None):
         """Return the situation identified by the address.
+
+        Address may be a valid address (see `parse_address`, above) or a
+        2-tuple of `(series_name, situation_name)`.
+
         """
-        series_name, situation_name = self.parse_address(address, current_situation)
+        if isinstance(address, basestring):
+            series_name, situation_name = self.parse_address(address, current_situation)
+        else:
+            # It better be a 2-tuple!
+            series_name, situation_name = address
 
         series = self.by_name[series_name]
         return series.by_name[situation_name] if situation_name else series.ordered[0]
