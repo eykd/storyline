@@ -89,3 +89,37 @@ class Plot(entities.Entity):
             value_schema=V.AdaptTo(Series),
         ))
     config = fields.Field(validator=V.AdaptTo(ConfigObj))
+
+    def parse_address(self, address, current_situation=None):
+        """Parse the given address into series/situation pair.
+
+        Addresses take the form of `series::situation`, `series`, or
+        `situation` relative to the given current situation.
+
+        """
+        if '::' in address:
+            series_name, situation_name = address.rsplit(u'::', 1)
+        else:
+            if current_situation is None:
+                # Must be a straight up series name.
+                series_name = address
+                situation_name = None
+            else:
+                # Is it a situation name in the current series or a series name?
+                current_series = self.by_name[current_situation.series]
+                if address in current_series.by_name:
+                    series_name = current_series.name
+                    situation_name = address
+                else:
+                    series_name = address
+                    situation_name = None
+
+        return series_name, situation_name
+
+    def get_situation_by_address(self, address, current_situation=None):
+        """Return the situation identified by the address.
+        """
+        series_name, situation_name = self.parse_address(address, current_situation)
+
+        series = self.by_name[series_name]
+        return series.by_name[situation_name] if situation_name else series.ordered[0]
