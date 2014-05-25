@@ -37,7 +37,7 @@ situation_tuple = V.ChainOf(
 
 class PlotState(entities.Entity):
     stack = fields.Field(
-        required = True,
+        default = (),
         validator = V.ChainOf(
             V.HomogeneousSequence(
                 item_schema=situation_tuple
@@ -45,14 +45,14 @@ class PlotState(entities.Entity):
             V.AdaptTo(frozenlist),
         ))
     situation = fields.Field(
-        required = True,
+        default = None,
         validator = V.AnyOf(
             lambda x: x is None,
             situation_tuple,
         ))
-    messages = fields.StringList(required=True)
+    messages = fields.StringList(default=())
     flags = fields.Field(
-        required = True,
+        default = (),
         validator = V.ChainOf(
             V.Type(accept_types=(collections.Iterable, )),
             lambda c: all(isinstance(i, basestring) for i in c),
@@ -60,11 +60,11 @@ class PlotState(entities.Entity):
         )
     )
     this = fields.Field(
-        required = True,
+        default = frozendict(),
         validator = simple_value_frozendict
     )
     locations = fields.Field(
-        required = True,
+        default = frozendict(),
         validator = V.ChainOf(
             V.Mapping(
                 key_schema = 'string',
