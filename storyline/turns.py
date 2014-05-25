@@ -15,15 +15,15 @@ class TurnManager(object):
         self.plot = plot
 
         if state_dict is not None:
-            state = states.PlotState.from_dict(plot, state_dict)
-            state.clear_messages()
+            state = states.PlotState(plot, state_dict)
+            state = state.clear_messages()
         else:
-            state = plot.make_state()
+            state = states.PlotState(plot)
 
         self.state = state
 
     def trigger(self, action, **kwargs):
-        self.state.trigger(self.plot, action, **kwargs)
+        self.state = self.state.trigger(action, **kwargs)
 
     def present_story_so_far(self):
         if self.state.messages:
