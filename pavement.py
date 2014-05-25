@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 """pavement.py -- paver tasks for managing the storyline project.
 """
-from paver.easy import task, sh
+from paver.easy import task, sh, path
 
 
 @task
 def test():
     """Run the test suite w/ nosetests, with coverage and pretty colors.
     """
+    path('.coverage').remove()
     sh(" ".join([
         "time",
         "bin/nosetests",
