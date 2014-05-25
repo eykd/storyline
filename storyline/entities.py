@@ -3,7 +3,10 @@
 """
 import warnings
 
-from nonobvious import entities, fields, V
+from nonobvious import entities
+from nonobvious import fields
+from nonobvious import V
+from nonobvious import frozendict, frozenlist
 from configobj import ConfigObj
 
 from . import templates
@@ -34,10 +37,14 @@ class Situation(entities.Entity, templates.Renderable):
     series = fields.String()
     content = fields.String()
     directives = fields.Field(
-        validator=V.Mapping(
-            key_schema='string',
-            value_schema=V.AdaptTo(Directive)
-        ))
+        validator=V.ChainOf(
+            V.Mapping(
+                key_schema='string',
+                value_schema=V.AdaptTo(Directive)
+            ),
+            V.AdaptTo(frozendict)
+        )
+    )
 
     @property
     def address(self):
@@ -68,14 +75,22 @@ class Series(entities.Entity, templates.Renderable):
     name = fields.String()
     content = fields.String()
     ordered = fields.Field(
-        validator=V.HomogeneousSequence(
-            item_schema=V.AdaptTo(Situation),
-        ))
+        validator=V.ChainOf(
+            V.HomogeneousSequence(
+                item_schema=V.AdaptTo(Situation),
+            ),
+            V.AdaptTo(frozenlist),
+        ),
+    )
     by_name = fields.Field(
-        validator=V.Mapping(
-            key_schema='string',
-            value_schema=V.AdaptTo(Situation),
-        ))
+        validator=V.ChainOf(
+            V.Mapping(
+                key_schema='string',
+                value_schema=V.AdaptTo(Situation),
+            ),
+            V.AdaptTo(frozendict),
+        ),
+    )
 
 
 class Plot(entities.Entity):
@@ -84,10 +99,14 @@ class Plot(entities.Entity):
     This collection corresponds to all the story files in a projec.
     """
     by_name = fields.Field(
-        validator=V.Mapping(
-            key_schema='string',
-            value_schema=V.AdaptTo(Series),
-        ))
+        validator=V.ChainOf(
+            V.Mapping(
+                key_schema='string',
+                value_schema=V.AdaptTo(Series),
+            ),
+            V.AdaptTo(frozendict),
+        ),
+    )
     config = fields.Field(validator=V.AdaptTo(ConfigObj))
 
     def parse_address(self, address, current_situation=None):
@@ -121,7 +140,6 @@ class Plot(entities.Entity):
 
         Address may be a valid address (see `parse_address`, above) or a
         2-tuple of `(series_name, situation_name)`.
-
         """
         if isinstance(address, basestring):
             series_name, situation_name = self.parse_address(address, current_situation)
