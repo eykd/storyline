@@ -152,3 +152,6 @@ class Plot(entities.Entity):
 
         series = self.by_name[series_name]
         return series.by_name[situation_name] if situation_name else series.ordered[0]
+
+    def get_start_situation(self):
+        return self.get_situation_by_address(self.config['start'])
