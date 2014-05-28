@@ -26,6 +26,10 @@ class PlotEntityTests(unittest.TestCase):
             config = {},
         )
 
+    def test_it_should_have_a_configobj(self):
+        from configobj import ConfigObj
+        ensure(self.plot.config).is_a(ConfigObj)
+
     def test_it_should_parse_absolute_addresses(self):
         ensure(
             self.plot.parse_address("foo::bar")

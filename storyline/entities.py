@@ -10,6 +10,7 @@ from nonobvious import frozendict, frozenlist
 from configobj import ConfigObj
 
 from . import templates
+from . import defaults
 
 
 class Directive(entities.Entity, templates.Renderable):
@@ -107,7 +108,9 @@ class Plot(entities.Entity):
             V.AdaptTo(frozendict),
         ),
     )
-    config = fields.Field(validator=V.AdaptTo(ConfigObj))
+    config = fields.Field(
+        validator=V.AdaptBy(defaults.load_config)
+    )
 
     def parse_address(self, address, current_situation=None):
         """Parse the given address into series/situation pair.
