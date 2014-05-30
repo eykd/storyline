@@ -165,8 +165,7 @@ class PlotState(entities.Entity):
         """
         ctx = self.as_context()
         message = self.current().trigger(directive, ctx, *args, **kwargs)
-        new_state = self.add_message(message)
-        return new_state
+        return self.from_context(ctx).add_message(message)
 
     def push(self, situation):
         """Push the situation (by address) onto the stack.

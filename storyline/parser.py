@@ -70,6 +70,7 @@ class ParserState(object):
     def add_series(self, name):
         self.pop_all()
         series = self.series = self.plot.add_series(name)
+        self.factories.append(series)
         return series
 
     def add_situation(self, name):

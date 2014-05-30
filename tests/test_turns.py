@@ -22,6 +22,7 @@ class TurnManagerTests(unittest.TestCase):
                 name='bar', series='foo', content="Hello, bar!",
                 directives={
                     'do_something': entities.Directive(name='do_something', situation='bar', content="Don't just stand there!"),
+                    'Onward!': entities.Directive(name='Onward!', situation='start', content="{{ push('baz') }}"),
                     'on_enter': entities.Directive(name='on_exit', situation='bar', content="Enter bar!"),
                     'on_exit': entities.Directive(name='on_exit', situation='bar', content="Exit bar!"),
                 }
@@ -107,7 +108,14 @@ class TurnManagerTests(unittest.TestCase):
         story, state = self.turn_mgr.take_turn('do_something')
         ensure(story).equals('<p>Don&#8217;t just stand&nbsp;there!</p>')
         ensure(state).is_(self.turn_mgr.state)
+        ensure(state.stack).equals(self.state_dict['stack'])
         ensure(self.turn_mgr.state.messages).is_empty()
+
+    def test_it_should_take_a_turn_by_performing_a_transformative_action(self):
+        story, state = self.turn_mgr.take_turn('Onward!')
+        ensure(story).equals('<p>Exit&nbsp;bar!</p>\n<p>Enter&nbsp;baz!</p>\n<p>Hello,&nbsp;baz!</p>')
+        ensure(state.stack).does_not_equal(self.state_dict['stack'])
+        ensure(state.stack).equals([('foo', 'bar'), ('foo', 'baz')])
 
     def test_it_should_take_a_turn_with_no_action_and_show_the_current_situation(self):
         story, state = self.turn_mgr.take_turn()

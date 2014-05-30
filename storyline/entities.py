@@ -24,6 +24,8 @@ class Directive(entities.Entity, templates.Renderable):
 
     def execute(self, context, *args, **kwargs):
         """Execute the directive within the given situation and state.
+
+        Return the resulting text and context pair.
         """
         ctx = dict(context)
         ctx['args'] = args
@@ -61,6 +63,8 @@ class Situation(entities.Entity, templates.Renderable):
 
     def trigger(self, directive, context, *args, **kwargs):
         """Trigger the given directive (by name), executing it in the given context.
+
+        Return the resulting text and context pair.
         """
         try:
             return self.directives[directive].execute(context, *args, **kwargs)

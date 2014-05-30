@@ -15,8 +15,6 @@ import urllib
 
 from docopt import docopt
 
-import msgpack
-
 from flask import (Flask, request, session, g, redirect,
                    url_for, abort, render_template, flash)
 
@@ -25,12 +23,13 @@ from watchdog.events import LoggingEventHandler
 from watchdog.events import FileSystemEventHandler
 
 from . import storyfile
-from . import states
+from . import serializers
 from . import turns
+from . import entities
 
 
 app = Flask(__name__)
-plot = states.Plot()
+plot = entities.Plot()
 app.secret_key = 'foobar'
 
 logger = logging.getLogger('http')
@@ -48,7 +47,7 @@ def story(action=None):
     session.permanent = True
     state = session.get('state', None)
     if state is not None:
-        state = msgpack.loads(state)
+        state = serializers.MsgPackStateSerializer.loads(plot, state)
 
     turn = turns.TurnManager(plot, state)
 
@@ -63,7 +62,7 @@ def story(action=None):
 
     story, state = turn.take_turn(action, **action_kwargs)
 
-    session['state'] = msgpack.dumps(state)
+    session['state'] = serializers.MsgPackStateSerializer.dumps(state)
 
     logger.debug("########## Fin.")
 
@@ -80,15 +79,15 @@ def reset():
 
 
 class Reloader(FileSystemEventHandler):
-    def __init__(self, plot, story_path):
-        self.plot = plot
+    def __init__(self, story_path):
         self.path = story_path
         super(Reloader, self).__init__()
 
     def on_any_event(self, event):
         if not event.is_directory:
             logger.debug("%s changed. Reloading." % event.src_path)
-            storyfile.load_path(self.path, self.plot)
+            global plot
+            plot = storyfile.load_plot_from_path(self.path)
 
 
 def main():
@@ -105,11 +104,12 @@ def main():
 
     story_path = arguments.get('STORY_PATH', '.')
 
-    storyfile.load_path(story_path, plot)
+    global plot
+    plot = storyfile.load_plot_from_path(story_path)
 
     observer = Observer()
     observer.schedule(LoggingEventHandler(), path=story_path, recursive=True)
-    observer.schedule(Reloader(plot, story_path), path=story_path, recursive=True)
+    observer.schedule(Reloader(story_path), path=story_path, recursive=True)
 
     observer.start()
     try:
