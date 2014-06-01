@@ -230,7 +230,7 @@ class PlotState(entities.Entity):
             new_state = self._exit()
         new_state = new_state.copy(situation=situation.pair)
         new_state = new_state.trigger('on_enter')
-        new_state = new_state.add_message(situation.content)
+        new_state = new_state.render_situation()
         return new_state
 
     def _exit(self):
