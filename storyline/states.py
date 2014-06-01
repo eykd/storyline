@@ -124,7 +124,7 @@ class PlotState(entities.Entity):
 
             # Local context actions
             'push': lambda a: commands.append(('push', a)) or u'',
-            'pop': lambda: commands.append(('pop', )) or u'',
+            'pop': lambda a=None: commands.append(('pop', )) or u'',
             'replace': lambda a: commands.append(('replace', a)) or u'',
             'select': lambda a: commands.append(('replace', a)) or u'',
             'reset': lambda a=None: commands.append(('reset', a)) or u''
