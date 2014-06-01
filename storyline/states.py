@@ -203,7 +203,7 @@ class PlotState(entities.Entity):
     def reset(self, situation=None):
         """Clear the stack and start fresh with the named situation.
         """
-        if situation is None:
+        if not situation:
             situation = self.plot.config['start']
         if isinstance(situation, basestring):
             situation = self.plot.get_situation_by_address(situation, self.current())
