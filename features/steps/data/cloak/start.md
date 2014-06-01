@@ -7,5 +7,5 @@ but, hey, what do you expect in a cheap demo game...?
 [Onward!](replace!rooms::foyer)
 
 ## > on_enter
-{{ I.am("wearing cloak", True) }}
+{{ I.set("wearing cloak", True) }}
 {{ flags.add("items::Opera Cloak") }}

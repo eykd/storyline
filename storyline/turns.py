@@ -15,22 +15,23 @@ class TurnManager(object):
         self.plot = plot
 
         if state_dict is not None:
-            state = states.PlotState.from_dict(plot, state_dict)
-            state.clear_messages()
+            state = states.PlotState(plot, state_dict)
+            state = state.clear_messages()
         else:
-            state = plot.make_state()
+            state = states.PlotState(plot)
+            state = state.push(plot.get_start_situation())
 
         self.state = state
 
     def trigger(self, action, **kwargs):
-        self.state.trigger(self.plot, action, **kwargs)
+        self.state = self.state.trigger(action, **kwargs)
 
     def present_story_so_far(self):
-        if self.state.messages:
-            story_text = u'\n\n'.join(m for m in self.state.messages
-                                      if m is not None and m.strip())
-        else:
-            story_text = self.state.current(self.plot).content
+        if not self.state.messages:
+            self.state = self.state.render_situation()
+
+        story_text = u'\n\n'.join(m for m in self.state.messages
+                                  if m is not None and m.strip())
 
         logger.debug("#### The Story:\n%s", story_text)
         md_extensions = self.plot.config['markdown']['extensions']
@@ -44,7 +45,6 @@ class TurnManager(object):
             self.trigger(action, **action_kwargs)
 
         story = self.present_story_so_far()
-        state = self.state.to_dict()
+        self.state = self.state.clear_messages()
 
-        self.state.clear_messages()
-        return story, state
+        return story, self.state

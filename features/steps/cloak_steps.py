@@ -4,6 +4,8 @@
 from behave import given, when, then
 from path import path
 
+from ensure import ensure
+
 PATH = path(__file__).abspath().dirname()
 
 CLOAK_PATH = PATH / 'data' / 'cloak'
@@ -16,30 +18,30 @@ def plot_definition_step(context):
 
 @when(u'I read the Cloak of Darkness series definitions')
 def read_series_definitions_step(context):
-    from storyline.states import Plot
-    plot = context.plot = Plot()
-    plot.load_path(CLOAK_PATH)
+    from storyline import storyfile
+    context.plot = storyfile.load_plot_from_path(CLOAK_PATH)
 
 
 @then(u'I have a Plot with the Cloak of Darkness Series definitions')
 def check_plot_series_step(context):
     plot = context.plot
     for name in ('rooms', 'items', 'actions', 'start'):
-        assert name in plot.by_name
+        ensure(plot.by_name).contains(name)
 
 
 @then(u'I can start a new Plot State')
 def start_plot_state_step(context):
-    state = context.state = context.plot.make_state()
-    context.situation = state.current(context.plot)
+    from storyline import states
+    state = context.state = states.PlotState(context.plot).push(context.plot.get_start_situation())
+    context.situation = state.current()
 
 
 @given(u'I am in the "{situation}" situation of "{series}"')
 @then(u'I am in the "{situation}" situation of "{series}"')
 def check_situation_step(context, situation, series):
     state = context.state
-    assert state.stack[-1] == (series, situation), (state.situation, state.stack[-1])
-    assert state.situation == (series, situation), (state.situation, state.stack[-1])
+    ensure(state.stack[-1]).equals((series, situation))
+    ensure(state.situation).equals((series, situation))
 
 
 @then(u'the "{flag_name}" flag should be "{state}"')
@@ -54,21 +56,20 @@ def check_flag_state_step(context, flag_name, state, datatype="unicode"):
         state = bool(state)
     else:
         state = getattr(__builtins__, datatype)(state)
-    value = context.state.this.get(flag_name, None)
-    assert value == state, (flag_name, value)
+    ensure(context.state.this.get(flag_name, None)).equals(state)
 
 
 @given(u'the stack has a length of {length:d}')
 @then(u'the stack has a length of {length:d}')
 def check_stack_length_step(context, length):
-    assert len(context.state.stack) == length, len(context.state.stack)
+    ensure(len(context.state.stack)).equals(length)
 
 
 @when(u'I choose "{action}"')
 def choose_action_step(context, action):
     state = context.state
-    state.choose(context.plot, action)
-    context.situation = state.current(context.plot)
+    state = context.state = state.trigger(action)
+    context.situation = state.current()
 
 
 @then(u'the last message says "{message}"')
@@ -80,4 +81,4 @@ def check_last_message_step(context, message):
     while last_message is not None and not last_message.strip():
         last_index -= 1
         last_message = state.messages[last_index]
-    assert last_message == message, (last_index, last_message, state.messages)
+    ensure(last_message).equals(message)
