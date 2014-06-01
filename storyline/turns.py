@@ -27,11 +27,11 @@ class TurnManager(object):
         self.state = self.state.trigger(action, **kwargs)
 
     def present_story_so_far(self):
-        if self.state.messages:
-            story_text = u'\n\n'.join(m for m in self.state.messages
-                                      if m is not None and m.strip())
-        else:
-            story_text = self.state.current().content
+        if not self.state.messages:
+            self.state = self.state.render_situation()
+
+        story_text = u'\n\n'.join(m for m in self.state.messages
+                                  if m is not None and m.strip())
 
         logger.debug("#### The Story:\n%s", story_text)
         md_extensions = self.plot.config['markdown']['extensions']

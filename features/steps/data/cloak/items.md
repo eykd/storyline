@@ -15,7 +15,7 @@ Your [opera cloak](!) is hanging on it.
 {{ push('actions::hang up cloak') }}
 
 ## > opera cloak
-{{ I.am("wearing cloak", True) }}
+{{ I.set("wearing cloak", True) }}
 
 
 # = message
