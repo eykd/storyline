@@ -10,6 +10,10 @@ start = string(default="start")
 
 [markdown]
 extensions = string_list(default=list())
+
+[states]
+base = string_list(default=list())
+extensions = string_list(default=list())
 """.splitlines(), list_values=False)
 
 

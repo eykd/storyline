@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
-"""storyline.states -- state machines for telling stories.
+"""storyline.states.base -- state machines for telling stories.
 """
 import collections
 import logging
+import warnings
 
 logger = logging.getLogger('storyline')
 
@@ -10,8 +11,9 @@ from nonobvious import entities, fields
 from nonobvious import frozendict, frozenlist, frozenset
 from nonobvious import V
 
-from .contexts import ContextSet, ContextState, ContextList
-
+from ..contexts import ContextSet, ContextState, ContextList
+from .. import plugins
+from .. import templates
 
 simple_value_frozendict = V.ChainOf(
     V.Mapping(
@@ -33,6 +35,86 @@ situation_tuple = V.ChainOf(
     ),
     V.AdaptTo(tuple),
 )
+
+
+class PlotStateManager(object):
+    default_base_states = [
+        'storyline.states.stack.StackState',
+        'storyline.states.flags.FlagsState',
+        'storyline.states.this.ThisState',
+        'storyline.states.locations.LocationState',
+    ]
+
+    def __init__(self, plot, *args, **kwargs):
+        super(PlotStateManager, self).__init__()
+        self.plot = plot
+        self.messages = []
+        base = self.plot.config['states'].get('base') or self.default_base_states
+        extensions = self.plot.config['states'].get('extensions') or []
+        self.plugins = base + extensions
+        self.states = dict(
+            (plugin_path, self._get_plugin(plugin_path, *args, **kwargs))
+            for plugin_path in base + extensions
+        )
+
+    def _get_plugin(self, plugin_path, *args, **kwargs):
+        try:
+            ext_class = plugins.import_plugin(plugin_path)
+        except ImportError as e:
+            warnings.warn("Plugin {} is not available: {}".format(plugin_path, e.message))
+        return ext_class(self.plot, self.messages, *args, **kwargs)
+
+    def get_events(self, event):
+        """Return executable content for the given event.
+        """
+        for state in self.states.itervalues():
+            template = state.get_event(event)
+            if template is not None:
+                yield template
+
+    def get_contexts(self, commands):
+        for state in self.states.itervalues():
+            yield state.get_context(commands)
+
+    def render_situation(self):
+        return u''
+
+    def clear_messages(self):
+        self.messages[:] = ()
+
+
+class PlotStateEntity(entities.Entity):
+    def __init__(self, plot, messages, *args, **kwargs):
+        self.plot = plot
+        self.messages = messages
+        super(PlotStateEntity, self).__init__(*args, **kwargs)
+
+    def copy(self, *args, **kwargs):
+        """Return a shallow copy, optionally with updated members as specified.
+
+        Updated members must pass validation.
+        """
+        return self.__class__(self.plot, self.messages, self, *args, **kwargs)
+
+    def as_context(self, commands):
+        return {}
+
+    def from_context(self, context):
+        return self
+
+    def add_message(self, message):
+        """Add a message to the output buffer.
+        """
+        if isinstance(message, basestring):
+            message = templates.get_template_from_string(message)
+        if message is not None:
+            logger.debug("New message:\n {}\n".format(message))
+            logger.debug("Messages: {}".format(self.messages))
+            self.messages.append(message)
+        return self
+
+    def get_event(self, action):
+        pass
 
 
 class PlotState(entities.Entity):
@@ -164,19 +246,19 @@ class PlotState(entities.Entity):
         """Execute the named directive on the current situation.
         """
         ctx = self.as_context()
-        message = self.current().trigger(directive, ctx, *args, **kwargs)
+        message = self._current().trigger(directive, ctx, *args, **kwargs)
         return self.from_context(ctx).add_message(message)
 
     def render_situation(self):
         ctx = self.as_context()
-        message = self.current().render(ctx)
+        message = self._current().render(ctx)
         return self.from_context(ctx).add_message(message)
 
     def push(self, situation):
         """Push the situation (by address) onto the stack.
         """
         if isinstance(situation, basestring):
-            situation = self.plot.get_situation_by_address(situation, self.current())
+            situation = self.plot.get_situation_by_address(situation, self._current())
         new_state = self._exit()
         new_state = new_state.copy(stack = new_state.stack + [situation.pair])
         return new_state._enter(situation, exit=False)
@@ -195,7 +277,7 @@ class PlotState(entities.Entity):
         """Replace the current situation on the stick with the named situation.
         """
         if isinstance(situation, basestring):
-            situation = self.plot.get_situation_by_address(situation, self.current())
+            situation = self.plot.get_situation_by_address(situation, self._current())
         new_state = self._exit()
         new_state = new_state.copy(stack = new_state.stack[:-1] + [situation.pair])
         return new_state._enter(situation, exit=False)
@@ -206,7 +288,7 @@ class PlotState(entities.Entity):
         if not situation:
             situation = self.plot.config['start']
         if isinstance(situation, basestring):
-            situation = self.plot.get_situation_by_address(situation, self.current())
+            situation = self.plot.get_situation_by_address(situation, self._current())
         new_state = self._exit()
 
         # Clear all state
@@ -225,7 +307,7 @@ class PlotState(entities.Entity):
         if situation is None:
             series, situation = self.top
         if isinstance(situation, basestring):
-            situation = self.plot.get_situation_by_address(situation, self.current())
+            situation = self.plot.get_situation_by_address(situation, self._current())
         if exit:
             new_state = self._exit()
         new_state = new_state.copy(situation=situation.pair)
@@ -239,7 +321,7 @@ class PlotState(entities.Entity):
             return new_state.copy(situation=None)
         return self
 
-    def current(self):
+    def _current(self):
         """Return the current situation of the plot.
         """
         top = self.top

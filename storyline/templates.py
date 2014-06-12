@@ -13,7 +13,11 @@ environment = Environment(
 
 
 def get_template_from_string(string):
-    return environment.from_string(string)
+    """Return a template for the given string, or None if it is empty or whitespace.
+    """
+    string = string.rstrip().lstrip(u'\n')
+    if string:
+        return environment.from_string(string)
 
 
 class Renderable(object):
@@ -24,6 +28,3 @@ class Renderable(object):
         if not hasattr(self, '_template'):
             self._template = get_template_from_string(self.content)
         return self._template
-
-    def render(self, context):
-        return self.template.render(**context)

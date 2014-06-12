@@ -18,11 +18,21 @@ class RenderableTests(unittest.TestCase):
         obj = MyObject()
         ensure(obj.template).is_a(jinja2.Template)
 
-    def test_it_should_render_a_template(self):
+    def test_it_should_get_None_if_no_content(self):
         from storyline import templates
 
         class MyObject(templates.Renderable):
-            content = "foo bar {{ what }}"
+            content = ""
 
         obj = MyObject()
-        ensure(obj.render).called_with({'what': 'baz'}).equals('foo bar baz')
+        ensure(obj.template).is_none()
+
+
+    def test_it_should_get_None_if_whitespace_content(self):
+        from storyline import templates
+
+        class MyObject(templates.Renderable):
+            content = "\n    "
+
+        obj = MyObject()
+        ensure(obj.template).is_none()

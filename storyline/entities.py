@@ -7,7 +7,6 @@ from nonobvious import entities
 from nonobvious import fields
 from nonobvious import V
 from nonobvious import frozendict, frozenlist
-from configobj import ConfigObj
 
 from . import templates
 from . import defaults
@@ -21,16 +20,6 @@ class Directive(entities.Entity, templates.Renderable):
     name = fields.String()
     situation = fields.String()
     content = fields.String()
-
-    def execute(self, context, *args, **kwargs):
-        """Execute the directive within the given situation and state.
-
-        Return the resulting text and context pair.
-        """
-        ctx = dict(context)
-        ctx['args'] = args
-        ctx['kwargs'] = kwargs
-        return self.render(ctx)
 
 
 class Situation(entities.Entity, templates.Renderable):
@@ -61,13 +50,11 @@ class Situation(entities.Entity, templates.Renderable):
         """
         return (self.series, self.name)
 
-    def trigger(self, directive, context, *args, **kwargs):
-        """Trigger the given directive (by name), executing it in the given context.
-
-        Return the resulting text and context pair.
+    def get_event(self, directive):
+        """Return the executable template for the given directive event.
         """
         try:
-            return self.directives[directive].execute(context, *args, **kwargs)
+            return self.directives[directive].template
         except KeyError:
             warnings.warn("Attempted to trigger a non-existent directive {}".format(directive))
 
